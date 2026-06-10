@@ -1,5 +1,0 @@
-{
-  "stdout": "",
-  "stderr": "  File \"/mnt/data/small_c_pointer_build/small_c_interpreter_project/run_tests.py\", line 26\n    actual = result.stdout.replace(\"\n                                   ^\nSyntaxError: unterminated string literal (detected at line 26)\n",
-  "returncode": 1
-}

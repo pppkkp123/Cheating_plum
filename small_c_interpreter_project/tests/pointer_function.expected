@@ -1,6 +1,0 @@
-after set_value: x = 20
-after add_one: x = 21
-ptr == &x : 1
-ptr != 0 : 1
-
-Program exited with return value 0.
