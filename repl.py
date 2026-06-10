@@ -72,10 +72,10 @@ class SmallCRepl:
             print(f"{i:>4}: {line}")
 
     def cmd_append(self):
-        print("Enter source lines. Finish with a single line: END")
+        print("Enter source lines. Finish with a single line: .")
         while True:
             line = input("... ")
-            if line.strip() == "END":
+            if line.strip() == ".":
                 break
             self.lines.append(line)
         print("Appended.")
