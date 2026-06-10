@@ -1,5 +1,5 @@
 from ast_nodes import *
-from memory import Environment, ArrayValue, Cell
+from memory import Environment, ArrayValue, Cell, PointerValue
 from sc_builtins import Builtins
 from errors import RuntimeSmallCError
 
@@ -29,7 +29,7 @@ class Interpreter:
     def load_program(self, program: Program):
         self.last_program = program
         self.functions = {}
-        # Fresh global memory each LOAD/RUN.
+        Cell.reset_addresses()
         self.globals = Environment(name="global")
         self.env = self.globals
 
@@ -117,7 +117,12 @@ class Interpreter:
             size = int(self.eval(decl.size))
             self.env.define(decl.name, ArrayValue(size))
         else:
-            value = self.eval(decl.init) if decl.init is not None else 0
+            if decl.init is not None:
+                value = self.eval(decl.init)
+            elif decl.pointer_level > 0:
+                value = PointerValue()
+            else:
+                value = 0
             self.env.define(decl.name, value)
 
     def eval(self, expr):
@@ -139,7 +144,8 @@ class Interpreter:
             if expr.op == "=":
                 cell.value = right
             else:
-                left = cell.value
+                left = self.as_number(cell.value)
+                right = self.as_number(right)
                 if expr.op == "+=":
                     cell.value = left + right
                 elif expr.op == "-=":
@@ -159,24 +165,34 @@ class Interpreter:
             return cell.value
 
         if isinstance(expr, Unary):
+            if expr.op == "&":
+                return PointerValue(self.get_lvalue_cell(expr.expr))
+
+            if expr.op == "*":
+                pointer = self.eval(expr.expr)
+                if not isinstance(pointer, PointerValue):
+                    raise RuntimeSmallCError("cannot dereference non-pointer value")
+                return pointer.deref_cell().value
+
             if expr.op in ("++", "--"):
                 cell = self.get_lvalue_cell(expr.expr)
-                cell.value += 1 if expr.op == "++" else -1
+                cell.value = self.as_number(cell.value) + (1 if expr.op == "++" else -1)
                 return cell.value
-            v = self.eval(expr.expr)
+
+            v = self.as_number(self.eval(expr.expr))
             if expr.op == "-":
-                return -int(v)
+                return -v
             if expr.op == "+":
-                return int(v)
+                return v
             if expr.op == "!":
                 return 0 if self.truthy(v) else 1
             if expr.op == "~":
-                return ~int(v)
+                return ~v
             raise RuntimeSmallCError(f"unknown unary operator {expr.op}")
 
         if isinstance(expr, Postfix):
             cell = self.get_lvalue_cell(expr.expr)
-            old = cell.value
+            old = self.as_number(cell.value)
             if expr.op == "++":
                 cell.value = old + 1
             elif expr.op == "--":
@@ -214,9 +230,27 @@ class Interpreter:
                 raise RuntimeSmallCError("subscripted value is not an array")
             return array_obj.get_cell(idx)
 
-        raise RuntimeSmallCError("left side of assignment must be a variable or array element")
+        if isinstance(expr, Unary) and expr.op == "*":
+            pointer = self.eval(expr.expr)
+            if not isinstance(pointer, PointerValue):
+                raise RuntimeSmallCError("cannot dereference non-pointer value")
+            return pointer.deref_cell()
+
+        raise RuntimeSmallCError("left side of assignment must be a variable, array element, or pointer dereference")
+
+    def as_number(self, value):
+        if isinstance(value, PointerValue):
+            return int(value)
+        try:
+            return int(value)
+        except Exception:
+            raise RuntimeSmallCError(f"expected numeric value, got {value!r}")
 
     def apply_binary(self, op, left, right):
+        if isinstance(left, PointerValue) or isinstance(right, PointerValue):
+            left = self.as_number(left)
+            right = self.as_number(right)
+
         if op == "+":
             return left + right
         if op == "-":
@@ -268,12 +302,13 @@ class Interpreter:
             except ReturnSignal as r:
                 return r.value
 
-            # void-like fallthrough
             return 0
         finally:
             self.env = old
 
     def truthy(self, value):
+        if isinstance(value, PointerValue):
+            return int(value) != 0
         return value != 0 and value is not None
 
     def vars_snapshot(self):

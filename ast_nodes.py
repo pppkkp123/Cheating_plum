@@ -14,6 +14,7 @@ class VarDecl:
     size: Optional[Any] = None
     init: Optional[Any] = None
     line: int = 0
+    pointer_level: int = 0
 
 
 @dataclass
@@ -23,6 +24,7 @@ class FunctionDecl:
     params: List[VarDecl]
     body: Any
     line: int = 0
+    pointer_level: int = 0
 
 
 @dataclass

@@ -1,11 +1,50 @@
-from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 from errors import RuntimeSmallCError
 
 
-@dataclass
 class Cell:
-    value: Any = 0
+    """A memory cell with a fake address for pointer simulation."""
+
+    _next_addr = 1000
+
+    @classmethod
+    def reset_addresses(cls):
+        cls._next_addr = 1000
+
+    def __init__(self, value: Any = 0):
+        self.value = value
+        self.address = Cell._next_addr
+        Cell._next_addr += 4
+
+    def __repr__(self):
+        return f"Cell(addr={self.address}, value={self.value!r})"
+
+
+class PointerValue:
+    """Simplified pointer value. It stores a reference to a Cell."""
+
+    def __init__(self, cell: Optional[Cell] = None):
+        self.cell = cell
+
+    @property
+    def address(self):
+        return 0 if self.cell is None else self.cell.address
+
+    def deref_cell(self) -> Cell:
+        if self.cell is None:
+            raise RuntimeSmallCError("null pointer dereference")
+        return self.cell
+
+    def __int__(self):
+        return self.address
+
+    def __bool__(self):
+        return self.address != 0
+
+    def __repr__(self):
+        if self.cell is None:
+            return "NULL"
+        return f"&{self.cell.address}"
 
 
 class ArrayValue:

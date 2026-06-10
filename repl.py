@@ -4,7 +4,7 @@ from interpreter import Interpreter
 from errors import SmallCError
 
 
-WELCOME = """Small-C Interactive Interpreter v1.0
+WELCOME = """Small-C Interactive Interpreter v1.1 Pointer
 Type HELP for commands.
 """
 
@@ -25,6 +25,9 @@ Commands:
   FUNCS                        Show functions after CHECK/RUN.
   HELP                         Show this help.
   EXIT | QUIT                  Leave interpreter.
+
+Pointer syntax now supported:
+  int *p;   p = &x;   *p = 99;   printf("%d", *p);
 
 Tip:
   You can also type a one-line Small-C statement/declaration, and it will be appended.
@@ -72,7 +75,7 @@ class SmallCRepl:
             print(f"{i:>4}: {line}")
 
     def cmd_append(self):
-        print("Enter source lines. Finish with a single line: END")
+        print("Enter source lines. Finish with a single line: .")
         while True:
             line = input("... ")
             if line.strip() == ".":
@@ -130,7 +133,6 @@ class SmallCRepl:
             return
         for name in funcs:
             print(name)
-
     def cmd_direct_exec(self, code_line):
         temp_source = f"""
     int main() {{
@@ -142,10 +144,7 @@ class SmallCRepl:
         program = Parser(tokens).parse()
         result = self.interpreter.run(program)
         print(f"\nProgram exited with return value {result}.")
-        tokens = Lexer(temp_source).tokenize()
-        program = Parser(tokens).parse()
-        result = self.interpreter.run(program)
-        print(f"\nProgram exited with return value {result}.")
+        
 
     def run(self):
         print(WELCOME)

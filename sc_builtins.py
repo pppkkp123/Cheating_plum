@@ -2,8 +2,15 @@ import random
 from errors import RuntimeSmallCError
 
 
+def _to_int(value):
+    try:
+        return int(value)
+    except Exception:
+        return 0
+
+
 def _format_c(fmt, args):
-    """Very small printf-style formatter: supports %d, %c, %s and %%."""
+    """Very small printf-style formatter: supports %d, %i, %c, %s, %p and %% ."""
     out = []
     arg_i = 0
     i = 0
@@ -13,24 +20,25 @@ def _format_c(fmt, args):
             if spec == "%":
                 out.append("%")
             elif spec in ("d", "i"):
-                out.append(str(int(args[arg_i])))
+                out.append(str(_to_int(args[arg_i])))
+                arg_i += 1
+            elif spec == "p":
+                out.append(hex(_to_int(args[arg_i])))
                 arg_i += 1
             elif spec == "c":
                 v = args[arg_i]
-                out.append(chr(v) if isinstance(v, int) else str(v)[0])
+                out.append(chr(_to_int(v)) if not isinstance(v, str) else v[0])
                 arg_i += 1
             elif spec == "s":
                 out.append(str(args[arg_i]))
                 arg_i += 1
             else:
-                # keep unknown specifier readable
                 out.append("%" + spec)
             i += 2
             continue
         out.append(fmt[i])
         i += 1
 
-    # Append extra arguments like many teaching interpreters do for convenience.
     while arg_i < len(args):
         out.append(" " + str(args[arg_i]))
         arg_i += 1
@@ -55,7 +63,7 @@ class Builtins:
 
         if name == "putchar":
             v = args[0]
-            ch = chr(v) if isinstance(v, int) else str(v)[0]
+            ch = chr(_to_int(v)) if not isinstance(v, str) else v[0]
             print(ch, end="")
             return ord(ch)
 
@@ -67,7 +75,6 @@ class Builtins:
             return len(str(args[0]))
 
         if name == "strcpy":
-            # Teaching simplification: Python strings are immutable, so return copied value.
             return str(args[1])
 
         if name == "strcmp":
@@ -78,22 +85,22 @@ class Builtins:
             return str(args[0]) + str(args[1])
 
         if name == "abs":
-            return abs(int(args[0]))
+            return abs(_to_int(args[0]))
 
         if name == "max":
-            return max(int(args[0]), int(args[1]))
+            return max(_to_int(args[0]), _to_int(args[1]))
 
         if name == "min":
-            return min(int(args[0]), int(args[1]))
+            return min(_to_int(args[0]), _to_int(args[1]))
 
         if name == "pow":
-            return int(args[0]) ** int(args[1])
+            return _to_int(args[0]) ** _to_int(args[1])
 
         if name == "rand":
             return random.randint(0, 32767)
 
         if name == "srand":
-            random.seed(int(args[0]))
+            random.seed(_to_int(args[0]))
             return 0
 
         raise RuntimeSmallCError(f"unknown function {name!r}")

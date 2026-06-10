@@ -8,13 +8,12 @@ class Parser:
     """
     Recursive-descent parser for a practical subset of Small-C.
 
-    Supported:
-    - int/char/void variables and functions
-    - one-dimensional arrays
-    - expression precedence
-    - assignment, +=, -=, *=, /=, %= 
-    - if/else, while, for, break, continue, return
-    - function calls
+    Pointer support:
+    - int *ptr;
+    - ptr = &x;
+    - *ptr = 99;
+    - printf("%d", *ptr);
+    - void set_value(int *p) { *p = 10; }
     """
 
     def __init__(self, tokens: List[Token]):
@@ -78,15 +77,22 @@ class Parser:
             raise ParseError(f"Expected type at line {tok.line}")
         return tok.value
 
+    def parse_pointer_level(self):
+        level = 0
+        while self.match("*"):
+            level += 1
+        return level
+
     def parse_global_declaration(self):
         var_type = self.parse_type()
+        pointer_level = self.parse_pointer_level()
         name_tok = self.consume(typ="IDENT", message="Expected identifier")
 
         if self.match("("):
             params = self.parse_params()
             self.consume(")", message="Expected ')' after parameters")
             body = self.parse_block()
-            return FunctionDecl(var_type, name_tok.value, params, body, name_tok.line)
+            return FunctionDecl(var_type, name_tok.value, params, body, name_tok.line, pointer_level)
 
         size = None
         if self.match("["):
@@ -98,7 +104,7 @@ class Parser:
             init = self.expression()
 
         self.consume(";", message="Expected ';' after variable declaration")
-        return VarDecl(var_type, name_tok.value, size, init, name_tok.line)
+        return VarDecl(var_type, name_tok.value, size, init, name_tok.line, pointer_level)
 
     def parse_params(self):
         params = []
@@ -106,13 +112,13 @@ class Parser:
             return params
         while True:
             p_type = self.parse_type()
+            p_pointer_level = self.parse_pointer_level()
             p_name = self.consume(typ="IDENT", message="Expected parameter name")
-            # support int arr[] parameter form as a normal variable name
             if self.match("["):
                 if not self.check("]"):
                     self.expression()
                 self.consume("]", message="Expected ']' in parameter")
-            params.append(VarDecl(p_type, p_name.value, None, None, p_name.line))
+            params.append(VarDecl(p_type, p_name.value, None, None, p_name.line, p_pointer_level))
             if not self.match(","):
                 break
         return params
@@ -135,6 +141,7 @@ class Parser:
         declarations = []
 
         while True:
+            pointer_level = self.parse_pointer_level()
             name_tok = self.consume(typ="IDENT", message="Expected variable name")
             size = None
             if self.match("["):
@@ -145,13 +152,11 @@ class Parser:
             if self.match("="):
                 init = self.expression()
 
-            declarations.append(VarDecl(var_type, name_tok.value, size, init, name_tok.line))
+            declarations.append(VarDecl(var_type, name_tok.value, size, init, name_tok.line, pointer_level))
             if not self.match(","):
                 break
 
         self.consume(";", message="Expected ';' after variable declaration")
-
-        # One statement node can represent several declarations.
         if len(declarations) == 1:
             return declarations[0]
         return Block(declarations)
@@ -293,7 +298,7 @@ class Parser:
         return expr
 
     def unary(self):
-        if self.peek().value in ("!", "-", "+", "~", "++", "--"):
+        if self.peek().value in ("!", "-", "+", "~", "++", "--", "&", "*"):
             op = self.peek().value
             self.i += 1
             return Unary(op, self.unary())

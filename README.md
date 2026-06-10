@@ -1,10 +1,8 @@
-# Small-C 互動式解譯器
+# Small-C 互動式解譯器 Pointer 版
 
-這是一份可執行的 Python 版 Small-C 簡化解譯器骨架，適合作為期末專題基礎版本。
+這是 Python 實作的 Small-C 簡化版互動式解譯器，已補上基本指標功能。
 
-## 1. 執行方式
-
-進入資料夾後執行：
+## 執行方式
 
 ```bash
 python main.py
@@ -13,101 +11,67 @@ python main.py
 或直接執行測試檔：
 
 ```bash
-python main.py tests/basic.sc
-python main.py tests/variables.sc
-python main.py tests/if_loop.sc
-python main.py tests/array.sc
-python main.py tests/function.sc
-python main.py tests/sort.sc
+python main.py tests/pointer_basic.sc
+python main.py tests/pointer_function.sc
+python main.py tests/pointer_array.sc
 ```
 
-## 2. REPL 指令
+## 一鍵測試
 
-```text
-NEW
-LOAD <file>
-SAVE <file>
-LIST
-APPEND
-INSERT <line> <code>
-DELETE <line>
-CHECK
-RUN
-TRACE ON
-TRACE OFF
-VARS
-FUNCS
-HELP
-EXIT
+```bash
+python run_tests.py
 ```
 
-## 3. 已支援的 Small-C 語法
+## 已支援功能
 
 - `int`、`char`、`void`
 - 全域變數、區域變數
-- 一維陣列，例如 `int arr[10];`
+- 一維陣列
 - 函式定義與呼叫
-- 遞迴函式
-- 算術運算：`+ - * / %`
-- 比較運算：`< <= > >= == !=`
-- 邏輯運算：`&& || !`
-- 位元運算：`& | ^ ~`
-- 指派運算：`= += -= *= /= %=`
-- 自增自減：`++ --`
+- 遞迴
 - `if / else`
 - `while`
 - `for`
-- `break`
-- `continue`
-- `return`
+- `break / continue / return`
+- 算術、比較、邏輯、位元運算
+- `printf` 等內建函式
+- 指標簡化支援：
+  - `int *p;`
+  - `p = &x;`
+  - `*p = 99;`
+  - `printf("%d", *p);`
+  - `void set_value(int *p) { *p = 10; }`
+  - `p = &arr[1];` 和 `*p = 88;`
 
-## 4. 已支援的內建函式
+## 指標實作方式
 
-- `printf`
-- `putchar`
-- `getchar`
-- `strlen`
-- `strcpy`，簡化為回傳複製後字串
-- `strcmp`
-- `strcat`
-- `abs`
-- `max`
-- `min`
-- `pow`
-- `rand`
-- `srand`
-
-## 5. 專案架構
+本版本不是使用真正的 C 記憶體位址，而是用 Python 物件模擬。每個變數都會被包成一個 `Cell`，而每個 `Cell` 都有假位址。
 
 ```text
-main.py          程式入口
-repl.py          互動式命令介面
-lexer.py         詞法分析器
-parser.py        語法分析器
-ast_nodes.py     AST 節點定義
-interpreter.py   解譯執行核心
-memory.py        變數、陣列與作用域管理
-sc_builtins.py      內建函式
-errors.py        錯誤類別
-tests/           測試 Small-C 程式
+int x;      -> Cell(value=0, address=1000)
+int *p;     -> Cell(value=PointerValue(NULL), address=1004)
+p = &x;     -> p.value 指向 x 的 Cell
+*p = 99;    -> 修改 p 指向的 Cell，所以 x 也會變成 99
 ```
 
-## 6. 目前簡化限制
+## 測試檔與 .expected
 
-這份版本是「可執行骨架」，不是完整 C 編譯器，因此有以下限制：
+`tests/` 裡每個 `.sc` 都有對應 `.expected`，可用 `python run_tests.py` 自動比對。
 
-1. 指標 `*ptr`、取址 `&x` 尚未完整實作。
-2. `scanf` 尚未完整實作。
-3. 陣列只支援一維整數陣列。
-4. `char[]` 字串陣列尚未完整模擬成 C 的記憶體。
-5. `#define` 僅建議作為加分功能後續加入。
-6. 函式參數使用值傳遞，陣列作為參數尚未完整支援。
+新增指標測試：
 
-## 7. 建議後續加分方向
+- `pointer_basic.sc`
+- `pointer_function.sc`
+- `pointer_array.sc`
+- `error_null_pointer.sc`
+- `error_non_pointer.sc`
+- `error_address_rvalue.sc`
 
-- 加上 `scanf`
-- 加上真正的指標與記憶體位址模型
-- 加上 `char[]` 字串記憶體
-- 加上 `#define`
-- 加上更完整的錯誤行號與除錯 TRACE
-- 加上圖形化或網頁版介面
+## 目前限制
+
+- 沒有完整 C 記憶體模型
+- 沒有完整 pointer arithmetic，例如 `p + 1` 不會真的移到下一個元素
+- 沒有多維陣列
+- `scanf` 尚未完整實作
+- `char[]` 字串記憶體模型尚未完整實作
+- `#define` 尚未完整實作
