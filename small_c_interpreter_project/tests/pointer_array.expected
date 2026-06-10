@@ -1,0 +1,5 @@
+before: arr[1] = 20
+after: arr[1] = 88
+*p = 88
+
+Program exited with return value 0.

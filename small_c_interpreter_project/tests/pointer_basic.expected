@@ -1,0 +1,7 @@
+x = 10
+*ptr = 10
+after *ptr = 99, x = 99
+after x = 123, *ptr = 123
+ptr address = 1000
+
+Program exited with return value 0.
