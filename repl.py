@@ -72,7 +72,7 @@ class SmallCRepl:
             print(f"{i:>4}: {line}")
 
     def cmd_append(self):
-        print("Enter source lines. Finish with a single line: .")
+        print("Enter source lines. Finish with a single line: END")
         while True:
             line = input("... ")
             if line.strip() == ".":
@@ -131,6 +131,22 @@ class SmallCRepl:
         for name in funcs:
             print(name)
 
+    def cmd_direct_exec(self, code_line):
+        temp_source = f"""
+    int main() {{
+        {code_line}
+        return 0;
+    }}
+    """
+        tokens = Lexer(temp_source).tokenize()
+        program = Parser(tokens).parse()
+        result = self.interpreter.run(program)
+        print(f"\nProgram exited with return value {result}.")
+        tokens = Lexer(temp_source).tokenize()
+        program = Parser(tokens).parse()
+        result = self.interpreter.run(program)
+        print(f"\nProgram exited with return value {result}.")
+
     def run(self):
         print(WELCOME)
         while True:
@@ -188,8 +204,10 @@ class SmallCRepl:
                     else:
                         print("Usage: TRACE ON or TRACE OFF")
                 else:
-                    # convenient one-line append
-                    self.lines.append(raw)
-                    print(f"Appended line {len(self.lines)}. Use RUN or CHECK.")
+                    if line.startswith("printf("):
+                        self.cmd_direct_exec(raw)
+                    else:
+                        self.lines.append(raw)
+                        print(f"Appended line {len(self.lines)}. Use RUN or CHECK.")
             except Exception as e:
                 print(f"Error: {e}")
